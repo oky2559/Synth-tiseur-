@@ -1,10 +1,12 @@
-libbase_project = library('baseproject',
-  sources: ['custom_math.c'],
-  include_directories: inc,
-  install: true
-)
+cc = meson.get_compiler('c')
+libm = cc.find_library('m', required: true)
 
-libbase_project_dep = declare_dependency(
-  link_with: libbase_project,
-  include_directories: inc
+lib_sources = files('custom_math.c')
+
+# On crée la librairie partagée
+math_lib = shared_library('baseproject',
+  lib_sources,
+  include_directories: inc,
+  dependencies: [libm],
+  install: true,
 )
