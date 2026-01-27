@@ -1,0 +1,3 @@
+option('build_app', type: 'boolean', value: true, description: 'Build the application')
+option('tests', type: 'boolean', value: true, description: 'Build and run tests')
+
