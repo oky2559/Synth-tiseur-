@@ -1,4 +1,3 @@
-# L'exécutable a besoin de main.c ET gui.c
 app_sources = files('main.c', 'gui.c')
 
 # Dépendance GTK requise pour l'interface graphique
