@@ -85,3 +85,40 @@ void write_wav_header(FILE *f, int data_size) {
     fwrite("data", 1, 4, f);
     fwrite(&data_size, 4, 1, f);
 }
+
+float *generate_audio_buffer(const char *input_file, int *sample_count, float *duration) {
+    FILE *inputFile = fopen(input_file, "r");
+    if (!inputFile) return NULL;
+
+    int max_samples = SAMPLING_RATE * 10;
+    float *buffer = calloc(max_samples, sizeof(float));
+    if (!buffer) {
+        fclose(inputFile);
+        return NULL;
+    }
+
+    float total_duration = 0;
+    SoundNote note;
+
+    while (fscanf(inputFile, "%d %f %f %f", &note.type, &note.start, &note.duration, &note.freq) == 4) {
+        int start_sample = (int)(note.start * SAMPLING_RATE);
+        int num_samples = (int)(note.duration * SAMPLING_RATE);
+
+        for (int i = 0; i < num_samples; i++) {
+            if (start_sample + i < max_samples) {
+                float phase = (note.freq * i) / SAMPLING_RATE;
+                float t = (float)i / SAMPLING_RATE;
+                float env = envelope(t, note.duration);
+                buffer[start_sample + i] += generate_sample(note.type, phase) * env;
+            }
+        }
+
+        if (note.start + note.duration > total_duration)
+            total_duration = note.start + note.duration;
+    }
+
+    fclose(inputFile);
+    *sample_count = (int)(total_duration * SAMPLING_RATE);
+    *duration = total_duration;
+    return buffer;
+}
