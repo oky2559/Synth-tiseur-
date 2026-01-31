@@ -122,3 +122,33 @@ float *generate_audio_buffer(const char *input_file, int *sample_count, float *d
     *duration = total_duration;
     return buffer;
 }
+
+int save_audio_to_wav(const char *filename, float *buffer, int sample_count) {
+    FILE *f = fopen(filename, "wb");
+    if (!f) return 0;
+
+    int data_size = sample_count * sizeof(int16_t);
+    
+    write_wav_header(f, data_size);
+
+    int16_t *pcm_buffer = malloc(data_size);
+    if (!pcm_buffer) {
+        fclose(f);
+        return 0;
+    }
+
+    for (int i = 0; i < sample_count; i++) {
+        float s = buffer[i];
+        if (s > 1.0f) s = 1.0f;
+        else if (s < -1.0f) s = -1.0f;
+        
+        // Conversion float -> int16
+        pcm_buffer[i] = (int16_t)(s * 32767);
+    }
+
+    fwrite(pcm_buffer, sizeof(int16_t), sample_count, f);
+    
+    free(pcm_buffer);
+    fclose(f);
+    return 1;
+}
