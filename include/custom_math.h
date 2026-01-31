@@ -14,7 +14,6 @@ typedef struct {
     float freq;
 } SoundNote;
 
-double taylor_sin(double x);
 float generate_sample(int type, float phase);
 
 float apply_automatic_envelope(float time, float duration);
