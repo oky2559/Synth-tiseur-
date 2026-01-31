@@ -7,6 +7,6 @@ executable('base_project_app',
   app_sources,
   include_directories : inc,
   link_with : math_lib,      # On lie avec notre librairie math
-  dependencies : [gtk_dep, m_dep], # On ajoute GTK et Math
+  dependencies : [gtk_dep, libm], # On ajoute GTK et Math
   install : true,
 )

@@ -10,3 +10,10 @@ math_lib = shared_library('baseproject',
   dependencies: [libm],
   install: true,
 )
+
+# On déclare la dépendance pour que d'autres cibles puissent l'utiliser
+libbase_project_dep = declare_dependency(
+  link_with: math_lib,
+  include_directories: inc,
+  dependencies: [libm]
+)
