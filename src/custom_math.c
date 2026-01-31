@@ -70,10 +70,27 @@ void write_wav_header(FILE *f, int data_size) {
 
 float *generate_audio_buffer(const char *input_file, int *sample_count, float *duration) {
     FILE *inputFile = fopen(input_file, "r");
+
     if (!inputFile) return NULL;
 
-    int max_samples = SAMPLING_RATE * 10;
-    float *buffer = calloc(max_samples, sizeof(float));
+    float max_end_time = 0.0f;
+    SoundNote temp_note;
+
+    while (fscanf(inputFile, "%d %f %f %f", &temp_note.type, &temp_note.start, &temp_note.duration, &temp_note.freq) == 4) {
+        float end_time = temp_note.start + temp_note.duration;
+        if (end_time > max_end_time) {
+            max_end_time = end_time;
+        }
+    }
+
+    if (max_end_time <= 0.0f) {
+        fclose(inputFile);
+        return NULL;
+    }
+
+    int allocated_samples = (int)(max_end_time * SAMPLING_RATE) + 100;
+    float *buffer = calloc(allocated_samples, sizeof(float));
+    
     if (!buffer) {
         fclose(inputFile);
         return NULL;
@@ -87,7 +104,8 @@ float *generate_audio_buffer(const char *input_file, int *sample_count, float *d
         int num_samples = (int)(note.duration * SAMPLING_RATE);
 
         for (int i = 0; i < num_samples; i++) {
-            if (start_sample + i < max_samples) {
+            // Vérification pour ne pas écrire hors du buffer alloué
+            if (start_sample + i < allocated_samples) {
                 float phase = (note.freq * i) / SAMPLING_RATE;
                 float t = (float)i / SAMPLING_RATE;
                 float env = envelope(t, note.duration);
@@ -100,6 +118,7 @@ float *generate_audio_buffer(const char *input_file, int *sample_count, float *d
     }
 
     fclose(inputFile);
+    
     *sample_count = (int)(total_duration * SAMPLING_RATE);
     *duration = total_duration;
     return buffer;
