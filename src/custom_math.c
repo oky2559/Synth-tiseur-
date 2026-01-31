@@ -15,32 +15,42 @@ float generate_sample(int type, float phase) {
 }
 
 float apply_automatic_envelope(float time, float duration) {
-    float min_attack = 0.01f, min_decay = 0.01f, min_release = 0.02f;
-    float attack = fmaxf(min_attack, fminf(0.1f, duration * 0.15f));
-    float decay = fmaxf(min_decay, fminf(0.1f, duration * 0.15f));
-    float release = fmaxf(min_release, fminf(0.2f, duration * 0.2f));
-    float sustain = 0.9f;
-    float sustain_time = duration - (attack + decay + release);
-    if (sustain_time < 0) sustain_time = 0;
+    float attack = fminf(0.1f, duration * 0.15f);
+    float decay  = fminf(0.1f, duration * 0.15f);
+    float release = fminf(0.2f, duration * 0.2f);
+    
+    // Securites
+    if (attack < 0.001f) attack = 0.001f;
+    if (decay < 0.001f) decay = 0.001f;
+    if (release < 0.001f) release = 0.001f;
 
-    if (time < 0) return 0.0f;
-    if (time < attack) return time / attack;
-    if (time < attack + decay) return 1.0f - (1.0f - sustain) * ((time - attack) / decay);
-    if (time < attack + decay + sustain_time) return sustain;
-    if (time < duration) return sustain * (1.0f - (time - (duration - release)) / release);
-    return 0.0f;
-}
+    // Pour les notes trop courte
+    float total_adr = attack + decay + release;
+    if (total_adr > duration) {
+        float scale = duration / total_adr;
+        attack *= scale;
+        decay *= scale;
+        release *= scale;
+        total_adr = duration;
+    }
 
-float envelope(float t, float duration) {
-    float attack = 0.05f * duration;
-    float decay = 0.1f * duration;
-    float release = 0.15f * duration;
-    float sustain = 0.8f;
-    if (t < 0) return 0.0f;
-    if (t < attack) return t / attack;
-    if (t < attack + decay) return 1.0f - (1.0f - sustain) * ((t - attack) / decay);
-    if (t < duration - release) return sustain;
-    if (t < duration) return sustain * (1.0f - (t - (duration - release)) / release);
+    float sustain_level = 0.8f;
+    float sustain_time = duration - total_adr;
+
+    if (time < attack) 
+        return time / attack;
+    
+    if (time < attack + decay) 
+        return 1.0f - (1.0f - sustain_level) * ((time - attack) / decay);
+    
+    if (time < attack + decay + sustain_time) 
+        return sustain_level;
+    
+    if (time < duration) {
+        float release_start = attack + decay + sustain_time;
+        return sustain_level * (1.0f - (time - release_start) / release);
+    }
+    
     return 0.0f;
 }
 
