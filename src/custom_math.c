@@ -2,6 +2,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 
 float generate_sample(int type, float phase) {
@@ -98,6 +99,8 @@ float *generate_audio_buffer(const char *input_file, int *sample_count, float *d
         return NULL;
     }
 
+
+
     int allocated_samples = (int)(max_end_time * SAMPLING_RATE) + 100;
     float *buffer = calloc(allocated_samples, sizeof(float));
     
@@ -105,6 +108,9 @@ float *generate_audio_buffer(const char *input_file, int *sample_count, float *d
         fclose(inputFile);
         return NULL;
     }
+
+
+    rewind(inputFile);
 
     float total_duration = 0;
     SoundNote note;
@@ -118,7 +124,7 @@ float *generate_audio_buffer(const char *input_file, int *sample_count, float *d
             if (start_sample + i < allocated_samples) {
                 float phase = (note.freq * i) / SAMPLING_RATE;
                 float t = (float)i / SAMPLING_RATE;
-                float env = envelope(t, note.duration);
+                float env = apply_automatic_envelope(t, note.duration);
                 buffer[start_sample + i] += generate_sample(note.type, phase) * env;
             }
         }
