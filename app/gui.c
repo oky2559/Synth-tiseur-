@@ -154,15 +154,17 @@ void on_generate_clicked(GtkWidget *widget, AppWindow *app) {
     }
 
     // Sauvegarde automatique
-    const char *output_path = "/Users/victorschmutz/Downloads/output.wav";
+    const char *download_dir = g_get_user_special_dir(G_USER_DIRECTORY_DOWNLOAD);
+    char *output_path = g_build_filename(download_dir, "output.wav", NULL);
     if (save_audio_to_wav(output_path, app->buffer, app->actual_samples)) {
-        char msg[140];
+        char msg[256];
         snprintf(msg, sizeof(msg), "Succès: %.2fs générés dans %s", app->total_duration, output_path);
         update_status(app, msg);
     } else {
         update_status(app, "Erreur sauvegarde WAV.");
     }
     
+    g_free(output_path);
     gtk_widget_queue_draw(app->drawing_area);
 }
 
