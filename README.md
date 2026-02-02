@@ -1,112 +1,107 @@
-# Projet de base 
+# Synthétiseur Audio en C
 
-Ce projet établit une architecture de base avec meson pour le développement C.
+Synthétiseur audio modulaire en C. Il génère de la musique à partir de fichiers de partition textuels, affiche l’onde en temps réel et exporte en `.wav`.
 
-Vous êtes libres de modifier et renommer les variables, cibles de compilations et autres fichiers importants. Vous pouvez également utiliser d'autres fonctionnalités de [meson](https://mesonbuild.com/index.html)
+Deux modes d’utilisation :
+- **GUI (GTK3)** pour la visualisation et le contrôle interactif
+- **CLI** pour une génération rapide
 
-## Installation
+---
 
-Selon votre environnement, il vous est possible d'utiliser le projet de plusieurs manières différentes.
+## 🚀 Fonctionnalités
 
+### 🎹 Synthèse audio
+- **Synthèse additive** avec polyphonie (accords et notes superposées)
+- **4 formes d’onde** :
+  - `0` : Sinusoïdale
+  - `1` : Carrée
+  - `2` : Dents de scie
+  - `3` : Triangulaire
+- **Enveloppe ADSR automatique** pour éviter les clics et adoucir le son
 
+### 🖥️ Interface graphique (GTK3)
+- Visualisation de la forme d’onde (Cairo)
+- Boutons **Lire / Pause / Stop**, curseur de **Volume**
+- Barre de progression (ligne rouge)
+- Export automatique de `output.wav` dans le dossier **Téléchargements**
 
-### DevEnv: Windows / Linux / macOS
+### ⚡ Mode CLI
+- Génération de WAV sans interface graphique
 
-Cette variante exécute Nix et l’environnement de dev dans un conteneur Docker. Elle fonctionne de la même manière sur Windows, Linux et macOS, et évite d’installer Nix sur l’hôte.
+---
 
-Pré-requis : Docker installé.
+## 🛠 Pré-requis
 
-Depuis la racine du projet :
+- **Compilateur C** : GCC ou Clang
+- **Build** : Meson + Ninja
+- **GUI** : GTK+ 3.0 (développement)
+- **Audio** : SoX (`play`) ou ALSA (`aplay`)
 
-#### Linux / macOS :
+### Installation
 
-```bash
-docker run -it --rm \
-  -v "$PWD:/work" \
-  -w /work \
-  nixos/nix:latest \
-  sh
-```
-
-#### Windows (PowerShell) :
-
-```powershell
-docker run -it --rm `
-  -v "${PWD}:/work" `
-  -w /work `
-  nixos/nix:latest `
-  sh
-```
-
-#### Windows (CMD) :
-
-```bat
-docker run -it --rm ^
-  -v "%cd%:/work" ^
-  -w /work ^
-  nixos/nix:latest ^
-  sh
-```
-
-Dans le conteneur, entrer dans l’environnement DevEnv :
-
-```sh
-nix-env --install --attr devenv -f https://github.com/NixOS/nixpkgs/tarball/nixpkgs-unstable
-devenv shell
-
-```
-
-### Utilisation sans DevEnv (installation locale Meson)
-
-Cette variante n’utilise ni Nix ni Docker. Vous installez directement Meson (et un compilateur C) sur votre machine, puis vous construisez le projet avec Meson + Ninja.
-
-Pré-requis communs :
-
-* Un compilateur C (GCC/Clang ou MSVC)
-* Meson
-* Ninja (recommandé, Meson l’utilise par défaut)
-
-#### Linux (Debian/Ubuntu) :
-
+**Ubuntu / Debian**
 ```bash
 sudo apt update
-sudo apt install -y build-essential meson ninja-build
+sudo apt install build-essential meson ninja-build libgtk-3-dev sox
 ```
 
-#### macOS (Homebrew) :
+**macOS (Homebrew)**
+```bash
+brew install meson ninja gtk+3 sox
+```
+
+---
+
+## 📦 Compilation
 
 ```bash
-brew install meson ninja
-# Clang est fourni avec Xcode Command Line Tools
-xcode-select --install
+meson setup builddir
+meson compile -C builddir
 ```
 
-#### Windows (recommandé : MSYS2) :
+---
 
-```powershell
-# 1) Installer MSYS2, puis ouvrir "MSYS2 UCRT64" (ou MINGW64)
-# 2) Mettre à jour et installer la toolchain + meson + ninja
-pacman -Syu
-pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-meson mingw-w64-ucrt-x86_64-ninja
+## ▶️ Utilisation
+
+### GUI
+```bash
+./builddir/app/base_project_app
 ```
 
-#### Windows (Visual Studio / MSVC) :
-
-* Installer “Visual Studio Build Tools” (ou Visual Studio) avec le workload “Desktop development with C++”.
-* Installer Meson + Ninja via Python/pip (ou via Chocolatey).
-
-Avec Python/pip :
-
-```powershell
-py -m pip install --user meson ninja
+### CLI
+```bash
+./builddir/app/base_project_app --cli data/game.txt
 ```
 
+---
 
+## 🎵 Format des fichiers de partition (.txt)
 
-## Utilisation 
+Chaque ligne contient une note au format :
 
 ```
-meson setup build
-meson compile -C build
-meson test -C build
+[TYPE] [DEBUT] [DUREE] [FREQUENCE]
 ```
+
+- **TYPE** : 0=Sinus, 1=Carré, 2=Scie, 3=Triangle
+- **DEBUT** : temps de départ (secondes)
+- **DUREE** : duréex (secondes)
+- **FREQUENCE** : fréquence (Hz)
+
+**Exemple :**
+```
+0 0.0 0.5 440    # Note 1 : Sinus, La4
+2 0.5 0.5 880    # Note 2 : Scie, La5
+0 0.0 1.0 220    # Note 3 : Basse (polyphonie)
+```
+
+---
+
+## 📂 Architecture du projet
+
+- src/ : cœur du synthétiseur (calcul audio)
+- include/ : headers
+- app/ : application GUI/CLI
+- data/ : exemples de partitions
+- tests/ : tests unitaires
+- meson.build : configuration de build# Synthétiseur Audio en C
