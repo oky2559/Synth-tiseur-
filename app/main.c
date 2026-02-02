@@ -25,14 +25,13 @@ int main(int argc, char *argv[])
         printf("Génération réussie : %.2f secondes.\n", duration);
 
         // Sauvegarde à partir de la bibliothèque
-        const char *output_path = "/Users/victorschmutz/Downloads/output.wav";
-        if (save_audio_to_wav(output_path, buffer, sample_count))
+        if (save_audio_to_wav("output.wav", buffer, sample_count))
         {
-            printf("Fichier %s créé avec succès.\n", output_path);
+            printf("Fichier output.wav créé avec succès.\n");
         }
         else
         {
-            fprintf(stderr, "Erreur lors de l'écriture de %s\n", output_path);
+            fprintf(stderr, "Erreur lors de l'écriture de output.wav\n");
         }
 
         free(buffer);
