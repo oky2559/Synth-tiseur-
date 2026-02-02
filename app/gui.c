@@ -24,6 +24,8 @@ typedef struct {
     float volume_level;
     pthread_t audio_thread;
     gint64 start_time;
+    gboolean is_paused;
+    double accumulated_time;
 } AppWindow;
 
 void update_status(AppWindow *app, const char *message) {
@@ -31,18 +33,16 @@ void update_status(AppWindow *app, const char *message) {
 }
 
 
-// Thread simple pour jouer le son via la commande 'play' (soX)
 void* audio_playback_thread(void *arg) {
     AppWindow *app = (AppWindow *)arg;
     
     FILE *audio_dev = popen("play -t raw -r 44100 -b 16 -c 1 -e signed-integer -q -", "w");
     if (!audio_dev) {
-        // Fallback pour Linux (aplay) ou macOS (sox/play requis)
+
         audio_dev = popen("aplay -f cd -", "w"); 
     }
 
     if (!audio_dev) {
-        // Dernier recours, on essaye juste de ne pas crasher, mais pas de son
         app->is_playing = 0;
         return NULL;
     }
@@ -50,6 +50,11 @@ void* audio_playback_thread(void *arg) {
     while (app->is_playing && app->current_sample < app->actual_samples) {
         int samples_to_write = (app->actual_samples - app->current_sample);
         if (samples_to_write > PLAYBACK_BUFFER) samples_to_write = PLAYBACK_BUFFER;
+
+        if (app->is_paused) {
+            usleep(10000);
+            continue;
+        }
         
         int16_t pcm_buffer[PLAYBACK_BUFFER];
         for (int i = 0; i < samples_to_write; i++) {
@@ -118,8 +123,17 @@ gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app) {
     
     // Curseur de lecture (rouge)
     if (app->is_playing) {
+
+        
         gint64 now = g_get_monotonic_time();
-        double elapsed = (now - app->start_time) / 1000000.0;
+        double elapsed;
+
+        if (app->is_paused) {
+            elapsed = app->accumulated_time;
+        } else {
+            gint64 now = g_get_monotonic_time();
+            elapsed = app->accumulated_time + (now - app->start_time) / 1000000.0;
+        }
         int estimated_sample = (int)(elapsed * 44100);
         if (estimated_sample > app->actual_samples) {
             estimated_sample = app->actual_samples;
@@ -190,10 +204,31 @@ void on_play_clicked(GtkWidget *widget, AppWindow *app) {
     if (app->is_playing) return;
     
     app->is_playing = 1;
+    app->is_paused = FALSE;
+    app->accumulated_time = 0.0;
     app->current_sample = 0;
     app->start_time = g_get_monotonic_time();
     update_status(app, "Lecture...");
     pthread_create(&app->audio_thread, NULL, audio_playback_thread, app);
+}
+
+void on_pause_clicked(GtkWidget *widget, AppWindow *app) {
+    if (!app->is_playing) return;
+
+    if (app->is_paused) {
+
+        app->is_paused = FALSE;
+        app->start_time = g_get_monotonic_time();
+        gtk_button_set_label(GTK_BUTTON(widget), "Pause");
+        update_status(app, "Lecture en cours...");
+    } else {
+        app->is_paused = TRUE;
+        gint64 now = g_get_monotonic_time();
+        app->accumulated_time += (now - app->start_time) / 1000000.0;
+        
+        gtk_button_set_label(GTK_BUTTON(widget), "Reprendre");
+        update_status(app, "En Pause");
+    }
 }
 
 void on_stop_clicked(GtkWidget *widget, AppWindow *app) {
@@ -257,13 +292,16 @@ int launch_gui(int argc, char *argv[]) {
     // Boutons
     GtkWidget *hbox_ctrl = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     GtkWidget *btn_gen = gtk_button_new_with_label("Générer");
+    GtkWidget *pause_button = gtk_button_new_with_label("Pause");
     app.play_button = gtk_button_new_with_label("Lire");
     app.stop_button = gtk_button_new_with_label("Stop");
     g_signal_connect(btn_gen, "clicked", G_CALLBACK(on_generate_clicked), &app);
     g_signal_connect(app.play_button, "clicked", G_CALLBACK(on_play_clicked), &app);
     g_signal_connect(app.stop_button, "clicked", G_CALLBACK(on_stop_clicked), &app);
+    g_signal_connect(pause_button, "clicked", G_CALLBACK(on_pause_clicked), &app);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), btn_gen, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), app.play_button, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox_ctrl), pause_button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), app.stop_button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), hbox_ctrl, FALSE, FALSE, 0);
 
