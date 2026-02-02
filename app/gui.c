@@ -38,11 +38,11 @@ void *audio_playback_thread(void *arg)
 {
     AppWindow *app = (AppWindow *)arg;
 
-    FILE *audio_dev = popen("play -t raw -r 44100 -b 16 -c 1 -e signed-integer -q -", "w");
+    FILE *audio_dev = popen("play --buffer 1024 -t raw -r 44100 -b 16 -c 1 -e signed-integer -q -", "w");
     if (!audio_dev)
     {
 
-        audio_dev = popen("aplay -f cd -", "w");
+        audio_dev = popen("aplay --buffer-time=50000 -f cd -", "w");
     }
 
     if (!audio_dev)
@@ -364,7 +364,7 @@ int launch_gui(int argc, char *argv[])
     app.status_label = gtk_label_new("Prêt");
     gtk_box_pack_start(GTK_BOX(vbox), app.status_label, FALSE, FALSE, 0);
 
-    g_timeout_add(100, update_display, &app);
+    g_timeout_add(33, update_display, &app);
 
     gtk_widget_show_all(app.main_window);
     gtk_main();
