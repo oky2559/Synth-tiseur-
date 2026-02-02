@@ -123,8 +123,17 @@ gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app) {
     
     // Curseur de lecture (rouge)
     if (app->is_playing) {
+
+        
         gint64 now = g_get_monotonic_time();
-        double elapsed = (now - app->start_time) / 1000000.0;
+        double elapsed
+
+        if (app->is_paused) {
+            elapsed = app->accumulated_time;
+        } else {
+            gint64 now = g_get_monotonic_time();
+            elapsed = app->accumulated_time + (now - app->start_time) / 1000000.0;
+        }
         int estimated_sample = (int)(elapsed * 44100);
         if (estimated_sample > app->actual_samples) {
             estimated_sample = app->actual_samples;
