@@ -32,11 +32,11 @@ int main(int argc, char *argv[])
 
         if (save_audio_to_wav(output_path, buffer, sample_count))
         {
-            printf("Fichier %s créé avec succès.\n", output_path);
+            printf("Fichier output.wav créé avec succès.\n");
         }
         else
         {
-            fprintf(stderr, "Erreur lors de l'écriture de %s\n", output_path);
+            fprintf(stderr, "Erreur lors de l'écriture de output.wav\n");
         }
         g_free(output_path);
         free(buffer);
