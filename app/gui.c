@@ -204,6 +204,8 @@ void on_play_clicked(GtkWidget *widget, AppWindow *app) {
     if (app->is_playing) return;
     
     app->is_playing = 1;
+    app->is_paused = FALSE;
+    app->accumulated_time = 0.0;
     app->current_sample = 0;
     app->start_time = g_get_monotonic_time();
     update_status(app, "Lecture...");
@@ -297,9 +299,9 @@ int launch_gui(int argc, char *argv[]) {
     g_signal_connect(app.play_button, "clicked", G_CALLBACK(on_play_clicked), &app);
     g_signal_connect(app.stop_button, "clicked", G_CALLBACK(on_stop_clicked), &app);
     g_signal_connect(pause_button, "clicked", G_CALLBACK(on_pause_clicked), &app);
-    gtk_box_pack_start(GTK_BOX(hbox_ctrl), pause_button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), btn_gen, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), app.play_button, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox_ctrl), pause_button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), app.stop_button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), hbox_ctrl, FALSE, FALSE, 0);
 
