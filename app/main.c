@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
         // Sauvegarde à partir de la bibliothèque
         const char *download_dir = g_get_user_special_dir(G_USER_DIRECTORY_DOWNLOAD);
         char *output_path = g_build_filename(download_dir, "output.wav", NULL);
-        if (!download_dir) download_dir = ".";
+        if (!download_dir)
+            download_dir = ".";
 
         if (save_audio_to_wav(output_path, buffer, sample_count))
         {
