@@ -154,9 +154,10 @@ void on_generate_clicked(GtkWidget *widget, AppWindow *app) {
     }
 
     // Sauvegarde automatique
-    if (save_audio_to_wav("output.wav", app->buffer, app->actual_samples)) {
-        char msg[100];
-        snprintf(msg, sizeof(msg), "Succès: %.2fs générés dans output.wav", app->total_duration);
+    const char *output_path = "/Users/victorschmutz/Downloads/output.wav";
+    if (save_audio_to_wav(output_path, app->buffer, app->actual_samples)) {
+        char msg[140];
+        snprintf(msg, sizeof(msg), "Succès: %.2fs générés dans %s", app->total_duration, output_path);
         update_status(app, msg);
     } else {
         update_status(app, "Erreur sauvegarde WAV.");
