@@ -24,6 +24,8 @@ typedef struct {
     float volume_level;
     pthread_t audio_thread;
     gint64 start_time;
+    gboolean is_paused;
+    double accumulated_time;
 } AppWindow;
 
 void update_status(AppWindow *app, const char *message) {
@@ -194,6 +196,25 @@ void on_play_clicked(GtkWidget *widget, AppWindow *app) {
     app->start_time = g_get_monotonic_time();
     update_status(app, "Lecture...");
     pthread_create(&app->audio_thread, NULL, audio_playback_thread, app);
+}
+
+void on_pause_clicked(GtkWidget *widget, AppWindow *app) {
+    if (!app->is_playing) return;
+
+    if (app->is_paused) {
+
+        app->is_paused = FALSE;
+        app->start_time = g_get_monotonic_time();
+        gtk_button_set_label(GTK_BUTTON(widget), "Pause");
+        update_status(app, "Lecture en cours...");
+    } else {
+        app->is_paused = TRUE;
+        gint64 now = g_get_monotonic_time();
+        app->accumulated_time += (now - app->start_time) / 1000000.0;
+        
+        gtk_button_set_label(GTK_BUTTON(widget), "Reprendre");
+        update_status(app, "En Pause");
+    }
 }
 
 void on_stop_clicked(GtkWidget *widget, AppWindow *app) {
