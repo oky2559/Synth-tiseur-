@@ -133,7 +133,13 @@ gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app) {
         if (estimated_sample >= app->actual_samples) {
             app->is_playing = 0;
         }
+        if (estimated_sample >= app->actual_samples) {
+        app->is_playing = 0;      
+        update_status(app, "Prêt");   
+        gtk_widget_queue_draw(widget);
     }
+    }
+    
     
     return FALSE;
 }
