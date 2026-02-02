@@ -33,18 +33,16 @@ void update_status(AppWindow *app, const char *message) {
 }
 
 
-// Thread simple pour jouer le son via la commande 'play' (soX)
 void* audio_playback_thread(void *arg) {
     AppWindow *app = (AppWindow *)arg;
     
     FILE *audio_dev = popen("play -t raw -r 44100 -b 16 -c 1 -e signed-integer -q -", "w");
     if (!audio_dev) {
-        // Fallback pour Linux (aplay) ou macOS (sox/play requis)
+
         audio_dev = popen("aplay -f cd -", "w"); 
     }
 
     if (!audio_dev) {
-        // Dernier recours, on essaye juste de ne pas crasher, mais pas de son
         app->is_playing = 0;
         return NULL;
     }
@@ -52,6 +50,11 @@ void* audio_playback_thread(void *arg) {
     while (app->is_playing && app->current_sample < app->actual_samples) {
         int samples_to_write = (app->actual_samples - app->current_sample);
         if (samples_to_write > PLAYBACK_BUFFER) samples_to_write = PLAYBACK_BUFFER;
+
+        if (app->is_paused) {
+            usleep(10000);
+            continue;
+        }
         
         int16_t pcm_buffer[PLAYBACK_BUFFER];
         for (int i = 0; i < samples_to_write; i++) {
