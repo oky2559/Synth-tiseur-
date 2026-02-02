@@ -23,6 +23,7 @@ typedef struct {
     int current_sample;
     float volume_level;
     pthread_t audio_thread;
+    gint64 start_time;
 } AppWindow;
 
 void update_status(AppWindow *app, const char *message) {
@@ -117,12 +118,21 @@ gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app) {
     
     // Curseur de lecture (rouge)
     if (app->is_playing) {
-        float progress = (float)app->current_sample / app->actual_samples;
+        gint64 now = g_get_monotonic_time();
+        double elapsed = (now - app->start_time) / 1000000.0;
+        int estimated_sample = (int)(elapsed * 44100);
+        if (estimated_sample > app->actual_samples) {
+            estimated_sample = app->actual_samples;
+        }
+        float progress = (float)estimated_sample / app->actual_samples;
         int cx = 10 + (int)(progress * (width - 20));
         cairo_set_source_rgb(cr, 1, 0, 0);
         cairo_move_to(cr, cx, 0);
         cairo_line_to(cr, cx, height);
         cairo_stroke(cr);
+        if (estimated_sample >= app->actual_samples) {
+            app->is_playing = 0;
+        }
     }
     
     return FALSE;
@@ -175,6 +185,7 @@ void on_play_clicked(GtkWidget *widget, AppWindow *app) {
     
     app->is_playing = 1;
     app->current_sample = 0;
+    app->start_time = g_get_monotonic_time();
     update_status(app, "Lecture...");
     pthread_create(&app->audio_thread, NULL, audio_playback_thread, app);
 }
