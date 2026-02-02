@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <unistd.h> // pour usleep
+#include <unistd.h>
+#include <signal.h>
 #include "../include/custom_math.h"
 
 #define PLAYBACK_BUFFER 2048
@@ -27,6 +28,7 @@ typedef struct
     gint64 start_time;
     gboolean is_paused;
     double accumulated_time;
+    pid_t play_pid;
 } AppWindow;
 
 void update_status(AppWindow *app, const char *message)
@@ -38,11 +40,11 @@ void *audio_playback_thread(void *arg)
 {
     AppWindow *app = (AppWindow *)arg;
 
-    FILE *audio_dev = popen("play -t raw -r 44100 -b 16 -c 1 -e signed-integer -q -", "w");
+    FILE *audio_dev = popen("play --buffer 1024 -t raw -r 44100 -b 16 -c 1 -e signed-integer -q -", "w");
     if (!audio_dev)
     {
 
-        audio_dev = popen("aplay -f cd -", "w");
+        audio_dev = popen("aplay --buffer-time=50000 -f cd -", "w");
     }
 
     if (!audio_dev)
@@ -53,14 +55,17 @@ void *audio_playback_thread(void *arg)
 
     while (app->is_playing && app->current_sample < app->actual_samples)
     {
+        if (app->is_paused)
+        {
+            break; 
+        }
         int samples_to_write = (app->actual_samples - app->current_sample);
         if (samples_to_write > PLAYBACK_BUFFER)
             samples_to_write = PLAYBACK_BUFFER;
 
         if (app->is_paused)
         {
-            usleep(10000);
-            continue;
+            break;
         }
 
         int16_t pcm_buffer[PLAYBACK_BUFFER];
@@ -79,12 +84,14 @@ void *audio_playback_thread(void *arg)
         {
             break;
         }
-        fflush(audio_dev);
         app->current_sample += samples_to_write;
     }
 
     pclose(audio_dev);
-    app->is_playing = 0;
+    if (!app->is_paused && app->current_sample >= app->actual_samples)
+    {
+        app->is_playing = 0;
+    }
     return NULL;
 }
 
@@ -250,9 +257,9 @@ void on_pause_clicked(GtkWidget *widget, AppWindow *app)
 
     if (app->is_paused)
     {
-
         app->is_paused = FALSE;
         app->start_time = g_get_monotonic_time();
+        pthread_create(&app->audio_thread, NULL, audio_playback_thread, app);
         gtk_button_set_label(GTK_BUTTON(widget), "Pause");
         update_status(app, "Lecture en cours...");
     }
@@ -261,6 +268,12 @@ void on_pause_clicked(GtkWidget *widget, AppWindow *app)
         app->is_paused = TRUE;
         gint64 now = g_get_monotonic_time();
         app->accumulated_time += (now - app->start_time) / 1000000.0;
+        
+        // Arrêter le processus play immédiatement
+        if (app->play_pid > 0) {
+            kill(app->play_pid, SIGTERM);
+            app->play_pid = -1;
+        }
 
         gtk_button_set_label(GTK_BUTTON(widget), "Reprendre");
         update_status(app, "En Pause");
@@ -364,7 +377,7 @@ int launch_gui(int argc, char *argv[])
     app.status_label = gtk_label_new("Prêt");
     gtk_box_pack_start(GTK_BOX(vbox), app.status_label, FALSE, FALSE, 0);
 
-    g_timeout_add(100, update_display, &app);
+    g_timeout_add(33, update_display, &app);
 
     gtk_widget_show_all(app.main_window);
     gtk_main();
