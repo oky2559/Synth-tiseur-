@@ -8,7 +8,8 @@
 
 #define PLAYBACK_BUFFER 2048
 
-typedef struct {
+typedef struct
+{
     GtkWidget *main_window;
     GtkWidget *file_entry;
     GtkWidget *status_label;
@@ -28,66 +29,78 @@ typedef struct {
     double accumulated_time;
 } AppWindow;
 
-void update_status(AppWindow *app, const char *message) {
+void update_status(AppWindow *app, const char *message)
+{
     gtk_label_set_text(GTK_LABEL(app->status_label), message);
 }
 
-
-void* audio_playback_thread(void *arg) {
+void *audio_playback_thread(void *arg)
+{
     AppWindow *app = (AppWindow *)arg;
-    
-    FILE *audio_dev = popen("play -t raw -r 44100 -b 16 -c 1 -e signed-integer -q -", "w");
-    if (!audio_dev) {
 
-        audio_dev = popen("aplay -f cd -", "w"); 
+    FILE *audio_dev = popen("play -t raw -r 44100 -b 16 -c 1 -e signed-integer -q -", "w");
+    if (!audio_dev)
+    {
+
+        audio_dev = popen("aplay -f cd -", "w");
     }
 
-    if (!audio_dev) {
+    if (!audio_dev)
+    {
         app->is_playing = 0;
         return NULL;
     }
-    
-    while (app->is_playing && app->current_sample < app->actual_samples) {
-        int samples_to_write = (app->actual_samples - app->current_sample);
-        if (samples_to_write > PLAYBACK_BUFFER) samples_to_write = PLAYBACK_BUFFER;
 
-        if (app->is_paused) {
+    while (app->is_playing && app->current_sample < app->actual_samples)
+    {
+        int samples_to_write = (app->actual_samples - app->current_sample);
+        if (samples_to_write > PLAYBACK_BUFFER)
+            samples_to_write = PLAYBACK_BUFFER;
+
+        if (app->is_paused)
+        {
             usleep(10000);
             continue;
         }
-        
+
         int16_t pcm_buffer[PLAYBACK_BUFFER];
-        for (int i = 0; i < samples_to_write; i++) {
+        for (int i = 0; i < samples_to_write; i++)
+        {
             float sample = app->buffer[app->current_sample + i];
             sample *= app->volume_level;
-            if (sample > 1.0f) sample = 1.0f;
-            else if (sample < -1.0f) sample = -1.0f;
+            if (sample > 1.0f)
+                sample = 1.0f;
+            else if (sample < -1.0f)
+                sample = -1.0f;
             pcm_buffer[i] = (int16_t)(sample * 32767);
         }
-        
-        if (fwrite(pcm_buffer, sizeof(int16_t), samples_to_write, audio_dev) < (size_t)samples_to_write) {
+
+        if (fwrite(pcm_buffer, sizeof(int16_t), samples_to_write, audio_dev) < (size_t)samples_to_write)
+        {
             break;
         }
         fflush(audio_dev);
         app->current_sample += samples_to_write;
     }
-    
+
     pclose(audio_dev);
     app->is_playing = 0;
     return NULL;
 }
 
-gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app) {
+gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app)
+{
     GtkAllocation allocation;
     gtk_widget_get_allocation(widget, &allocation);
     int width = allocation.width;
     int height = allocation.height;
-    
+
     // Fond blanc
     cairo_set_source_rgb(cr, 1, 1, 1);
     cairo_paint(cr);
-    
-    if (!app->buffer || app->actual_samples == 0) {
+
+    if (!app->buffer || app->actual_samples == 0)
+    {
         cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
         cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
         cairo_set_font_size(cr, 14);
@@ -95,47 +108,54 @@ gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app) {
         cairo_show_text(cr, "Aucune onde chargée");
         return FALSE;
     }
-    
+
     // Axes
     cairo_set_source_rgb(cr, 0, 0, 0);
     cairo_set_line_width(cr, 1);
-    cairo_move_to(cr, 10, height/2);
-    cairo_line_to(cr, width - 10, height/2); // Axe X (temps)
+    cairo_move_to(cr, 10, height / 2);
+    cairo_line_to(cr, width - 10, height / 2); // Axe X (temps)
     cairo_stroke(cr);
-    
+
     // Dessin de l'onde (bleu)
     cairo_set_source_rgb(cr, 0.2, 0.4, 0.8);
     cairo_set_line_width(cr, 1);
-    
-    int skip = app->actual_samples / width; 
-    if (skip < 1) skip = 1;
-    
-    cairo_move_to(cr, 10, height/2);
-    for (int i = 0; i < width - 20; i++) {
+
+    int skip = app->actual_samples / width;
+    if (skip < 1)
+        skip = 1;
+
+    cairo_move_to(cr, 10, height / 2);
+    for (int i = 0; i < width - 20; i++)
+    {
         int sample_idx = i * skip;
-        if (sample_idx >= app->actual_samples) break;
-        
+        if (sample_idx >= app->actual_samples)
+            break;
+
         float val = app->buffer[sample_idx];
         int y = (height / 2) - (int)(val * (height / 2 - 10));
         cairo_line_to(cr, 10 + i, y);
     }
     cairo_stroke(cr);
-    
-    // Curseur de lecture (rouge)
-    if (app->is_playing) {
 
-        
+    // Curseur de lecture (rouge)
+    if (app->is_playing)
+    {
+
         gint64 now = g_get_monotonic_time();
         double elapsed;
 
-        if (app->is_paused) {
+        if (app->is_paused)
+        {
             elapsed = app->accumulated_time;
-        } else {
+        }
+        else
+        {
             gint64 now = g_get_monotonic_time();
             elapsed = app->accumulated_time + (now - app->start_time) / 1000000.0;
         }
         int estimated_sample = (int)(elapsed * 44100);
-        if (estimated_sample > app->actual_samples) {
+        if (estimated_sample > app->actual_samples)
+        {
             estimated_sample = app->actual_samples;
         }
         float progress = (float)estimated_sample / app->actual_samples;
@@ -144,33 +164,37 @@ gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app) {
         cairo_move_to(cr, cx, 0);
         cairo_line_to(cr, cx, height);
         cairo_stroke(cr);
-        if (estimated_sample >= app->actual_samples) {
+        if (estimated_sample >= app->actual_samples)
+        {
             app->is_playing = 0;
         }
-        if (estimated_sample >= app->actual_samples) {
-        app->is_playing = 0;      
-        update_status(app, "Prêt");   
-        gtk_widget_queue_draw(widget);
+        if (estimated_sample >= app->actual_samples)
+        {
+            app->is_playing = 0;
+            update_status(app, "Prêt");
+            gtk_widget_queue_draw(widget);
+        }
     }
-    }
-    
-    
+
     return FALSE;
 }
 
-void on_generate_clicked(GtkWidget *widget, AppWindow *app) {
+void on_generate_clicked(GtkWidget *widget, AppWindow *app)
+{
     (void)widget;
     const char *input_path = gtk_entry_get_text(GTK_ENTRY(app->file_entry));
-    
-    if (!input_path || strlen(input_path) == 0) {
+
+    if (!input_path || strlen(input_path) == 0)
+    {
         update_status(app, "Erreur: Entrez un nom de fichier.");
         return;
     }
 
     update_status(app, "Génération en cours...");
-    
+
     // Nettoyage précédent
-    if (app->buffer) {
+    if (app->buffer)
+    {
         free(app->buffer);
         app->buffer = NULL;
     }
@@ -178,7 +202,8 @@ void on_generate_clicked(GtkWidget *widget, AppWindow *app) {
     // Appel à la bibliothèque pour générer le son
     app->buffer = generate_audio_buffer(input_path, &app->actual_samples, &app->total_duration);
 
-    if (!app->buffer) {
+    if (!app->buffer)
+    {
         update_status(app, "Erreur: Fichier introuvable ou invalide.");
         return;
     }
@@ -186,23 +211,29 @@ void on_generate_clicked(GtkWidget *widget, AppWindow *app) {
     // Sauvegarde automatique
     const char *download_dir = g_get_user_special_dir(G_USER_DIRECTORY_DOWNLOAD);
     char *output_path = g_build_filename(download_dir, "output.wav", NULL);
-    if (save_audio_to_wav(output_path, app->buffer, app->actual_samples)) {
+    if (save_audio_to_wav(output_path, app->buffer, app->actual_samples))
+    {
         char msg[256];
         snprintf(msg, sizeof(msg), "Succès: %.2fs générés dans %s", app->total_duration, output_path);
         update_status(app, msg);
-    } else {
+    }
+    else
+    {
         update_status(app, "Erreur sauvegarde WAV.");
     }
-    
+
     g_free(output_path);
     gtk_widget_queue_draw(app->drawing_area);
 }
 
-void on_play_clicked(GtkWidget *widget, AppWindow *app) {
+void on_play_clicked(GtkWidget *widget, AppWindow *app)
+{
     (void)widget;
-    if (!app->buffer) return;
-    if (app->is_playing) return;
-    
+    if (!app->buffer)
+        return;
+    if (app->is_playing)
+        return;
+
     app->is_playing = 1;
     app->is_paused = FALSE;
     app->accumulated_time = 0.0;
@@ -212,43 +243,52 @@ void on_play_clicked(GtkWidget *widget, AppWindow *app) {
     pthread_create(&app->audio_thread, NULL, audio_playback_thread, app);
 }
 
-void on_pause_clicked(GtkWidget *widget, AppWindow *app) {
-    if (!app->is_playing) return;
+void on_pause_clicked(GtkWidget *widget, AppWindow *app)
+{
+    if (!app->is_playing)
+        return;
 
-    if (app->is_paused) {
+    if (app->is_paused)
+    {
 
         app->is_paused = FALSE;
         app->start_time = g_get_monotonic_time();
         gtk_button_set_label(GTK_BUTTON(widget), "Pause");
         update_status(app, "Lecture en cours...");
-    } else {
+    }
+    else
+    {
         app->is_paused = TRUE;
         gint64 now = g_get_monotonic_time();
         app->accumulated_time += (now - app->start_time) / 1000000.0;
-        
+
         gtk_button_set_label(GTK_BUTTON(widget), "Reprendre");
         update_status(app, "En Pause");
     }
 }
 
-void on_stop_clicked(GtkWidget *widget, AppWindow *app) {
+void on_stop_clicked(GtkWidget *widget, AppWindow *app)
+{
     (void)widget;
     app->is_playing = 0;
     update_status(app, "Arrêté.");
     gtk_widget_queue_draw(app->drawing_area);
 }
 
-void on_volume_changed(GtkRange *range, AppWindow *app) {
+void on_volume_changed(GtkRange *range, AppWindow *app)
+{
     app->volume_level = gtk_range_get_value(range);
 }
 
-void on_file_chooser_clicked(GtkWidget *widget, AppWindow *app) {
+void on_file_chooser_clicked(GtkWidget *widget, AppWindow *app)
+{
     (void)widget;
     GtkWidget *dialog = gtk_file_chooser_dialog_new("Ouvrir", GTK_WINDOW(app->main_window),
                                                     GTK_FILE_CHOOSER_ACTION_OPEN,
                                                     "_Annuler", GTK_RESPONSE_CANCEL,
                                                     "_Ouvrir", GTK_RESPONSE_ACCEPT, NULL);
-    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT)
+    {
         char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
         gtk_entry_set_text(GTK_ENTRY(app->file_entry), filename);
         g_free(filename);
@@ -256,15 +296,18 @@ void on_file_chooser_clicked(GtkWidget *widget, AppWindow *app) {
     gtk_widget_destroy(dialog);
 }
 
-gboolean update_display(gpointer data) {
+gboolean update_display(gpointer data)
+{
     AppWindow *app = (AppWindow *)data;
-    if (app->is_playing) {
+    if (app->is_playing)
+    {
         gtk_widget_queue_draw(app->drawing_area);
     }
     return TRUE;
 }
 
-int launch_gui(int argc, char *argv[]) {
+int launch_gui(int argc, char *argv[])
+{
     gtk_init(&argc, &argv);
 
     AppWindow app = {0};
@@ -326,6 +369,7 @@ int launch_gui(int argc, char *argv[]) {
     gtk_widget_show_all(app.main_window);
     gtk_main();
 
-    if (app.buffer) free(app.buffer);
+    if (app.buffer)
+        free(app.buffer);
     return 0;
 }
