@@ -126,7 +126,7 @@ gboolean on_drawing_area_draw(GtkWidget *widget, cairo_t *cr, AppWindow *app) {
 
         
         gint64 now = g_get_monotonic_time();
-        double elapsed
+        double elapsed;
 
         if (app->is_paused) {
             elapsed = app->accumulated_time;
@@ -290,11 +290,14 @@ int launch_gui(int argc, char *argv[]) {
     // Boutons
     GtkWidget *hbox_ctrl = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     GtkWidget *btn_gen = gtk_button_new_with_label("Générer");
+    GtkWidget *pause_button = gtk_button_new_with_label("Pause");
     app.play_button = gtk_button_new_with_label("Lire");
     app.stop_button = gtk_button_new_with_label("Stop");
     g_signal_connect(btn_gen, "clicked", G_CALLBACK(on_generate_clicked), &app);
     g_signal_connect(app.play_button, "clicked", G_CALLBACK(on_play_clicked), &app);
     g_signal_connect(app.stop_button, "clicked", G_CALLBACK(on_stop_clicked), &app);
+    g_signal_connect(pause_button, "clicked", G_CALLBACK(on_pause_clicked), &app);
+    gtk_box_pack_start(GTK_BOX(hbox_ctrl), pause_button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), btn_gen, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), app.play_button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox_ctrl), app.stop_button, FALSE, FALSE, 0);
